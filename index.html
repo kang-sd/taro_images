@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jennifer Canvas | AI Tarot</title>
+  <title>Jennifer Canvas Tarot</title>
   
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
@@ -22,55 +22,45 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 전역 노출
     window.db = db; window.addDoc = addDoc; window.collection = collection;
     window.serverTimestamp = serverTimestamp; window.getDocs = getDocs;
     window.query = query; window.orderBy = orderBy; window.deleteDoc = deleteDoc;
     window.doc = doc; window.getDoc = getDoc;
+
     window.cardMap = Array.from({length: 78}, (_, i) => `https://kang-sd.github.io/taro_images/card_${i}.webp`)
       .reduce((a, c, i) => ({...a, [`card_${i}`]: c}), {back: "https://kang-sd.github.io/taro_images/card_back.webp"});
   </script>
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;700&display=swap');
-    :root { --gold: #d4af37; --neon-p: #bc13fe; --bg: #050508; --card-bg: #12121a; }
-    
-    body { background: var(--bg); color: #e0e0e0; font-family: 'Noto Serif KR', serif; margin: 0; display: flex; justify-content: center; min-height: 100vh; background-image: radial-gradient(circle at 50% 50%, #151125 0%, #050508 100%); }
-    .glass-panel { background: rgba(18, 18, 26, 0.85); backdrop-filter: blur(15px); border: 1px solid rgba(212, 175, 55, 0.2); border-radius: 30px; padding: 35px; width: 95vw; max-width: 550px; margin: 25px auto; box-shadow: 0 0 50px rgba(0,0,0,0.9); border-top: 2px solid var(--gold); }
-    
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.1); }
-    .title-text { font-size: 1.5rem; font-weight: bold; color: var(--gold); letter-spacing: 3px; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5); }
-    
-    .page { display: none; animation: fadeIn 0.8s ease; }
+    :root { --gold: #ffd700; --bg: #0d0d15; --surf: #1a1a2e; --accent: #bc13fe; }
+    body { background: var(--bg); color: #fff; font-family: 'Apple SD Gothic Neo', sans-serif; margin: 0; display: flex; justify-content: center; min-height: 100vh; background-image: radial-gradient(circle at center, #1a1a35 0%, #0d0d15 100%); }
+    .glass-panel { background: rgba(26, 26, 46, 0.9); border: 1px solid rgba(255,215,0,0.2); border-radius: 25px; padding: 30px; box-shadow: 0 15px 45px rgba(0,0,0,0.8); width: 95vw; max-width: 550px; margin: 25px auto; text-align: center; border-top: 3px solid var(--gold); }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,215,0,0.1); padding-bottom: 15px; margin-bottom: 25px; }
+    .page { display: none; animation: fadeIn 0.6s ease; }
     .page.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    /* 화면 1 안내문구 (이미지와 100% 일치) */
+    .intro-grid { display: flex; gap: 20px; text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.05); }
+    .main-img { width: 120px; border-radius: 10px; border: 1px solid var(--gold); box-shadow: 0 0 15px rgba(188, 19, 254, 0.4); }
+    .intro-text { font-size: 0.9rem; line-height: 1.6; color: #ccc; }
+    .hl-red { color: #ff5e62; font-weight: bold; }
+    .hl-blue { color: #4dabf7; font-weight: bold; }
 
-    /* 화면 1 안내문구 복구 */
-    .intro-grid { display: flex; gap: 20px; text-align: left; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 20px; border: 1px solid rgba(212,175,55,0.15); margin-bottom: 25px; }
-    .main-img { width: 110px; border-radius: 12px; filter: drop-shadow(0 0 15px var(--neon-p)); }
-    .intro-text { font-size: 0.9rem; line-height: 1.7; color: #bbb; }
-    .hl { color: #ff5e62; font-weight: bold; }
-    .hl-b { color: #00d2ff; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 15px; border-radius: 12px; background: #0f0f1f; border: 1px solid #333; color: white; margin-bottom: 15px; box-sizing: border-box; font-size: 1rem; }
+    .btn { background: linear-gradient(135deg, #ffd700, #b8860b); color: #000; border: none; padding: 18px; border-radius: 50px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1.2rem; box-shadow: 0 5px 20px rgba(255,215,0,0.3); transition: 0.3s; }
+    .btn:hover { transform: translateY(-3px); filter: brightness(1.2); }
 
-    input, select, textarea { width: 100%; padding: 16px; border-radius: 15px; background: #0c0c14; border: 1px solid #333; color: white; margin-bottom: 15px; box-sizing: border-box; font-family: inherit; }
-    input:focus { border-color: var(--gold); outline: none; box-shadow: 0 0 10px rgba(212, 175, 55, 0.3); }
+    .card-slots { display: flex; justify-content: center; gap: 25px; margin: 35px 0; }
+    .card-box { width: 140px; height: 240px; border-radius: 15px; cursor: pointer; background: url('https://kang-sd.github.io/taro_images/card_back.webp') center/cover; border: 1px solid #444; transition: 0.6s; }
+    .card-box.flipped { transform: rotateY(180deg); border-color: var(--gold); box-shadow: 0 0 25px var(--accent); }
 
-    .btn { background: linear-gradient(135deg, #d4af37, #8b6b0d); color: #000; border: none; padding: 20px; border-radius: 50px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1.2rem; transition: 0.3s; box-shadow: 0 5px 20px rgba(212,175,55,0.3); }
-    .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(212,175,55,0.5); filter: brightness(1.1); }
-
-    /* 화면 2 카드 셔플 디자인 */
-    .card-slots { display: flex; justify-content: center; gap: 30px; margin: 40px 0; }
-    .card-item { width: 140px; height: 240px; border-radius: 15px; cursor: pointer; background: url('https://kang-sd.github.io/taro_images/card_back.webp') center/cover; border: 1px solid #444; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-    .card-item.flipped { transform: rotateY(180deg); border-color: var(--gold); box-shadow: 0 0 30px var(--neon-p); }
-
-    /* 화면 3 결과 상세 디자인 */
-    .res-card { background: rgba(255,255,255,0.04); border-radius: 20px; padding: 25px; margin-bottom: 30px; border-left: 5px solid var(--gold); text-align: left; }
-    .res-top { display: flex; justify-content: space-between; align-items: start; margin-bottom: 20px; }
-    .res-title { font-size: 1.4rem; font-weight: bold; color: var(--gold); }
-    .res-img { width: 90px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-    .d-label { color: #8a8a8a; font-size: 0.85rem; margin-top: 15px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 5px; }
-    .d-txt { font-size: 1.05rem; line-height: 1.6; margin-top: 8px; color: #efefef; }
-    .int-msg { color: #fff; font-weight: bold; font-size: 1.15rem; border-left: 3px solid var(--neon-p); padding-left: 10px; }
+    .res-card { background: rgba(255,255,255,0.04); border-radius: 20px; padding: 22px; margin-bottom: 25px; border-left: 5px solid var(--gold); text-align: left; }
+    .res-top { display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; }
+    .res-img { width: 90px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    .d-label { color: #8a8a8a; font-size: 0.85rem; margin-top: 15px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 4px; }
+    .d-content { font-size: 1rem; line-height: 1.6; margin-top: 6px; color: #efefef; }
+    .int-hl { color: #fff; font-weight: bold; font-size: 1.1rem; border-left: 3px solid var(--accent); padding-left: 10px; }
 
     #adminModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.98); z-index:9999; padding:20px; overflow-y:auto; box-sizing: border-box; }
   </style>
@@ -79,8 +69,8 @@
 
 <div class="glass-panel">
   <div class="header">
-    <span style="font-size:1.5rem;">🔱</span>
-    <span class="title-text">JENNIFER CANVAS</span>
+    <span style="font-size:1.6rem;">🔱</span>
+    <span style="font-weight:bold; letter-spacing:2px; color:var(--gold);">JENNIFER CANVAS TAROT</span>
     <span style="cursor:pointer; font-size:1.3rem;" onclick="openAdmin()">⚙️</span>
   </div>
 
@@ -88,79 +78,81 @@
     <div class="intro-grid">
       <img src="https://kang-sd.github.io/taro_images/card_0.webp" class="main-img">
       <div class="intro-text">
-        <span class="hl">타로란?</span> 상징으로 내면의 흐름을 비추는 도구입니다.<br>
-        <span class="hl">질문은.</span> <span class="hl-b">명확하고 구체적일수록 정확도가 높습니다.</span><br>
-        당신의 간절한 마음이 닿을 때 카드는 <span class="hl-b">방향을 제시합니다.</span><br>
-        하루 2번 가능, 기록은 3일간 보관됩니다.<br>
-        <span class="hl">총 2장 선택:</span> [과정의 흐름]과 [최종 결과]
+        <span class="hl-red">타로란?</span> 타로는 상징의 카드로 내면과 감정의 흐름을 비추는 도구입니다.<br>
+        <span class="hl-red">질문은.</span> <span class="hl-blue">명확하고 구체적인 질문을 하는 것이 타로 진행의 정확도를 높입니다.</span><br>
+        <span class="hl-red">당신의 마음과 질문이 간절할 때</span> <span class="hl-blue">방향을 제시합니다.</span><br>
+        하루에 2번만 할 수 있고 3일간 저장하고 이후 삭제됩니다.<br>
+        3일간 저장한 타로 결과는 검색을 통해 볼 수 있습니다.<br><br>
+        <span class="hl-red">총 2장을 선택합니다.</span><br>
+        첫 번째 카드는 <span class="hl-blue">과정의 흐름</span>, 두 번째 카드는 <span class="hl-blue">결과</span>를 보여줍니다.
       </div>
     </div>
-    <input type="text" id="uName" placeholder="성함을 입력해 주세요">
+    <input type="text" id="uName" placeholder="성함을 입력하세요">
     <select id="uTopic">
       <option value="" disabled selected>-- 상담 주제를 선택하세요 --</option>
       <option>연애</option><option>진로직업</option><option>금전</option><option>감정</option><option>건강</option>
       <option>시험합격</option><option>선택결정</option><option>인간관계</option><option>영적 메시지</option><option>미래 전반</option>
     </select>
-    <textarea id="uQuest" rows="2" placeholder="고민 내용을 상세히 적어주세요"></textarea>
+    <textarea id="uQuest" rows="2" placeholder="무엇이 궁금하신가요?"></textarea>
     <button class="btn" onclick="go2()">운명의 셔플 시작</button>
   </div>
 
   <div id="p2" class="page">
-    <h3 style="color:var(--gold);">카드를 섞었습니다. 두 장을 정성껏 고르세요.</h3>
+    <h3 style="color:var(--gold);">카드를 섞었습니다. 정성껏 두 장을 선택하세요.</h3>
     <div class="card-slots">
-      <div id="c1" class="card-item" onclick="flip(1)"></div>
-      <div id="c2" class="card-item" onclick="flip(2)"></div>
+      <div id="slot1" class="card-box" onclick="flip(1)"></div>
+      <div id="slot2" class="card-box" onclick="flip(2)"></div>
     </div>
-    <p id="guide" style="font-weight:bold; color:#888;">첫 번째 카드를 선택해 주세요</p>
+    <p id="guide" style="font-weight:bold; color:#888;">첫 번째 카드를 선택하세요</p>
     <button class="btn" id="resBtn" style="display:none;" onclick="go3()">운명의 해석 확인하기</button>
   </div>
 
   <div id="p3" class="page">
     <div id="finalOutput"></div>
-    <button class="btn" onclick="location.reload()" style="background:#222; color:#fff; margin-top:15px;">다른 질문하기</button>
+    <button class="btn" onclick="location.reload()" style="background:#222; color:#fff; margin-top:15px; border:1px solid #444;">다시 하기</button>
   </div>
 </div>
 
 <div id="adminModal">
   <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #444; padding-bottom:15px;">
-    <h2 style="color:var(--gold);">💎 상담 기록 리스트</h2>
-    <button class="btn" style="width:100px; padding:10px; margin:0;" onclick="closeAdmin()">닫기</button>
+    <h2 style="color:var(--gold);">상담 기록 마스터</h2>
+    <button class="btn" style="width:100px; margin:0; padding:10px;" onclick="closeAdmin()">닫기</button>
   </div>
-  <div id="adminList" style="text-align:left; margin-top:25px;"></div>
+  <div id="adminList" style="margin-top:25px; text-align:left;"></div>
 </div>
 
 <script>
   let picks = [null, null];
   const go2 = () => {
-    if(!uName.value || !uTopic.value || !uQuest.value) return alert("모든 항목을 입력해 주세요.");
+    if(!uName.value || !uTopic.value || !uQuest.value) return alert("모든 항목을 입력하셔야 운명이 열립니다.");
     p1.classList.remove('active'); p2.classList.add('active');
   };
 
   const flip = (n) => {
     if(picks[n-1]) return;
-    if(n==2 && !picks[0]) return alert("첫 번째 카드를 먼저 선택하세요!");
+    if(n==2 && !picks[0]) return alert("첫 번째 카드를 먼저 골라주세요.");
     const r = Math.floor(Math.random()*78);
     picks[n-1] = `card_${r}`;
-    const el = document.getElementById(`c${n}`);
+    const el = document.getElementById(`slot${n}`);
     el.style.backgroundImage = `url('${window.cardMap[picks[n-1]]}')`;
     el.classList.add('flipped');
-    if(n==1) guide.innerText = "두 번째 카드를 선택해 주세요";
+    if(n==1) guide.innerText = "두 번째 카드를 골라주세요.";
     else { guide.style.display='none'; resBtn.style.display='block'; }
   };
 
   async function go3() {
     p2.classList.remove('active'); p3.classList.add('active');
-    finalOutput.innerHTML = "<p style='margin-top:50px;'>운명의 기운을 읽는 중입니다...</p>";
+    finalOutput.innerHTML = "<p style='margin-top:50px;'>운명의 기운을 모으고 있습니다...</p>";
 
-    // 🔴 파이어베이스 자동 저장 (관리자 페이지 연동)
+    // 🔴 파이어베이스 자동 저장 (관리자 확인용)
     try {
       await window.addDoc(window.collection(window.db, "user_logs"), {
         user: uName.value, topic: uTopic.value, quest: uQuest.value,
         cards: picks, time: window.serverTimestamp()
       });
-    } catch(e) { console.error("기록 저장 실패"); }
+    } catch(e) { console.error("기록 저장 오류"); }
 
-    const getI = async (c, t, type) => {
+    const getData = async (c, t, type) => {
       const cleanT = t.replace(/\//g, "");
       const [iS, dS] = await Promise.all([
         window.getDoc(window.doc(window.db, "interpretations", `${c}_${cleanT}_${type}`)),
@@ -176,20 +168,20 @@
       };
     };
 
-    const d1 = await getI(picks[0], uTopic.value, "과정");
-    const d2 = await getI(picks[1], uTopic.value, "결과");
+    const d1 = await getData(picks[0], uTopic.value, "과정");
+    const d2 = await getData(picks[1], uTopic.value, "결과");
 
     let h = "";
     [d1, d2].forEach((d, i) => {
       h += `<div class="res-card">
         <div class="res-top">
-          <div><span style="color:var(--gold); font-size:0.8rem; font-weight:bold;">${i==0?'[과정]':'[결과]'}</span><div class="res-title">${d.name}</div></div>
+          <div><span style="color:var(--gold); font-size:0.85rem; font-weight:bold;">${i==0?'[과정의 흐름]':'[최종 결과]'}</span><div style="font-size:1.3rem; font-weight:bold; color:var(--gold); margin-top:5px;">${d.name}</div></div>
           <img src="${window.cardMap[picks[i]]}" class="res-img">
         </div>
-        <div class="d-label">주요 키워드</div><div class="d-txt">${d.key}</div>
-        <div class="d-label">타로 해석</div><div class="d-txt int-msg">${d.txt}</div>
-        <div class="d-label">서사 및 조언</div><div class="d-txt">${d.story}</div>
-        <div class="d-label">측면별 조언</div><div class="d-txt"><b>긍정:</b> ${d.posA}<br><b>부정:</b> ${d.negA}</div>
+        <div class="d-label">주요 키워드</div><div class="d-content">${d.key}</div>
+        <div class="d-label">타로 해석</div><div class="d-content int-hl">${d.txt}</div>
+        <div class="d-label">카드 서사 / 조언</div><div class="d-content">${d.story}</div>
+        <div class="d-label">상세 측면</div><div class="d-content"><b>긍정:</b> ${d.posA}<br><b>부정:</b> ${d.negA}</div>
       </div>`;
     });
     finalOutput.innerHTML = h;
@@ -202,8 +194,9 @@
       let h = "";
       qSnap.forEach(v => {
         const d = v.data();
-        h += `<div style="background:#151525; border:1px solid #333; padding:20px; border-radius:15px; margin-bottom:15px; position:relative;">
-          <b style="color:var(--gold); font-size:1.1rem;">${d.user}</b> <small>[${d.topic}]</small><br><p style="margin:10px 0; color:#ccc;">${d.quest}</p>
+        h += `<div style="background:#151525; border:1px solid #333; padding:18px; border-radius:15px; margin-bottom:15px; position:relative;">
+          <b style="color:var(--gold); font-size:1.1rem;">${d.user}</b> <small>[${d.topic}]</small><br>
+          <p style="margin:10px 0; color:#ccc; font-size:0.95rem;">${d.quest}</p>
           <small style="color:#555;">${d.time?.toDate().toLocaleString() || ""}</small>
           <button onclick="delLog('${v.id}')" style="position:absolute; right:15px; top:15px; background:#ff4d4d; color:white; border:none; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:bold;">삭제</button>
         </div>`;
