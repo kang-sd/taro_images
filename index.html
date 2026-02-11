@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jennifer Canvas Tarot</title>
+  <title>Jennifer Canvas | AI 타로</title>
   <style>
     :root { --gold: #c5a059; --bg: #f8f9fa; --text: #333; --border: #e1dcd3; }
-    body { background: var(--bg); color: var(--text); font-family: 'Apple SD Gothic Neo', sans-serif; margin: 0; padding: 1rem; display: flex; justify-content: center; }
-    .container { background: #fff; border-radius: 20px; padding: 25px; box-shadow: 0 15px 50px rgba(0,0,0,0.06); width: 95vw; max-width: 550px; border: 1px solid var(--border); text-align: center; }
+    body { background: var(--bg); color: var(--text); font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; margin: 0; padding: 1rem; display: flex; justify-content: center; }
+    .container { background: #fff; border-radius: 20px; padding: 25px; box-shadow: 0 15px 50px rgba(0,0,0,0.06); width: 95vw; max-width: 600px; border: 1px solid var(--border); text-align: center; }
     
     .screen { display: none; }
     .active { display: block; animation: fadeIn 0.4s ease-out; }
@@ -34,7 +34,7 @@
     .card-res-img { width: 85px; border-radius: 8px; float: right; margin-left: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
     .d-label { color: var(--gold); font-size: 0.82rem; margin-top: 15px; font-weight: bold; border-bottom: 1px solid #f1ece1; padding-bottom: 3px; }
     .d-content { font-size: 0.95rem; line-height: 1.6; margin-top: 5px; color: #444; }
-    .int-hl { font-weight: bold; color: #222; border-left: 4px solid var(--gold); padding-left: 10px; margin: 10px 0; }
+    .int-hl { font-weight: bold; color: #222; border-left: 3px solid var(--gold); padding-left: 10px; margin: 10px 0; }
   </style>
 </head>
 <body>
@@ -71,12 +71,12 @@
       <div id="slot1" class="card-box" onclick="pickCard(1)"></div>
       <div id="slot2" class="card-box" onclick="pickCard(2)"></div>
     </div>
-    <button class="btn" id="resBtn" style="display:none;" onclick="fetchAppsScriptData()">운명의 결과 확인</button>
+    <button class="btn" id="resBtn" style="display:none;" onclick="fetchInterpretation()">해석 결과 보기</button>
   </div>
 
   <div id="screen3" class="screen">
     <div id="resultArea"></div>
-    <button class="btn" id="saveBtn" onclick="saveResult()">나의 타로 결과 저장하기 (3일 보관)</button>
+    <button class="btn" id="saveBtn" onclick="saveUserResult()">나의 타로 결과 저장하기 (3일 보관)</button>
     <button class="btn" onclick="location.reload()" style="background:#eee; color:#666; margin-top:10px; box-shadow:none;">처음으로</button>
   </div>
 </div>
@@ -90,10 +90,7 @@
     const name = document.getElementById("uName").value.trim();
     const topic = document.getElementById("uTopic").value;
     const quest = document.getElementById("uQuest").value.trim();
-    
-    if(!name) return alert("성함을 입력해 주세요.");
-    if(!topic) return alert("주제를 선택해 주세요.");
-    if(!quest) return alert("질문을 입력해 주세요.");
+    if(!name || !topic || !quest) return alert("모든 항목을 입력해 주세요.");
 
     document.getElementById("screen1").classList.remove("active");
     document.getElementById("screen2").classList.add("active");
@@ -105,16 +102,15 @@
     
     const r = Math.floor(Math.random()*78);
     picked[n-1] = r;
-    const el = document.getElementById(`slot${n}`);
-    el.style.backgroundImage = `url('https://kang-sd.github.io/taro_images/card_${r}.webp')`;
-    el.classList.add("flipped");
+    document.getElementById(`slot${n}`).style.backgroundImage = `url('https://kang-sd.github.io/taro_images/card_${r}.webp')`;
+    document.getElementById(`slot${n}`).classList.add("flipped");
     
     if(picked[0] !== null && picked[1] !== null) {
       document.getElementById("resBtn").style.display = "block";
     }
   }
 
-  async function fetchAppsScriptData() {
+  async function fetchInterpretation() {
     document.getElementById("screen2").classList.remove("active");
     document.getElementById("screen3").classList.add("active");
     document.getElementById("resultArea").innerHTML = "<p style='padding:50px;'>운명의 기록을 읽어오는 중입니다...</p>";
@@ -129,54 +125,44 @@
 
     try {
       const response = await fetch(`${GAS_URL}?${queryParams.toString()}`);
-      if (!response.ok) throw new Error('Network response was not ok');
+      if (!response.ok) throw new Error('Network error');
       const data = await response.json();
       
       let html = "";
-      // 🔴 Apps Script의 JSON 구조(card1, card2)에 맞춰 데이터 바인딩
+      // 🔴 원본 파일의 필드명(keywords, interpretation, story 등)을 100% 매칭하여 출력
       [data.card1, data.card2].forEach((c, i) => {
         html += `
           <div class="res-card">
             <img src="https://kang-sd.github.io/taro_images/card_${picked[i]}.webp" class="card-res-img">
             <div style="color:var(--gold); font-weight:bold; font-size:1.1rem;">${i==0?'[과정]':'[결과]'} ${c.cardName}</div>
             
-            <div class="d-label">주요 키워드</div><div class="d-content">${c.keywords || ''}</div>
-            <div class="d-label">타로 해석</div><div class="d-content int-hl">${c.interpretation || ''}</div>
-            <div class="d-label">카드 서사</div><div class="d-content">${c.story || ''}</div>
+            <div class="d-label">주요 키워드</div><div class="d-content">${c.keywords}</div>
+            <div class="d-label">타로 해석</div><div class="d-content int-hl">${c.interpretation}</div>
+            <div class="d-label">카드 서사</div><div class="d-content">${c.story}</div>
             <div class="d-label">측면별 조언</div>
             <div class="d-content">
-              <b>긍정적 측면:</b> ${c.positiveAspect || ''}<br>
-              <b>부정적 측면:</b> ${c.negativeAspect || ''}
+              <b>긍정적 측면:</b> ${c.positiveAspect}<br>
+              <b>부정적 측면:</b> ${c.negativeAspect}
             </div>
             <div class="d-label">감정 에너지</div>
             <div class="d-content">
-              긍정 ${c.positive || 0}% / 부정 ${c.negative || 0}% (${c.tone || ''} - ${c.description || ''})
+              긍정 ${c.positive}% / 부정 ${c.negative}% (${c.tone} - ${c.description})
             </div>
           </div>`;
       });
       document.getElementById("resultArea").innerHTML = html;
     } catch(e) {
-      console.error(e);
-      document.getElementById("resultArea").innerHTML = "<p style='padding:50px; color:red;'>데이터 연동 실패. GAS URL 또는 시트 데이터를 확인하세요.</p>";
+      document.getElementById("resultArea").innerHTML = "<p style='padding:50px; color:red;'>데이터를 불러오는 데 실패했습니다.<br><small>Apps Script 배포 URL과 데이터 형식을 확인하세요.</small></p>";
     }
   }
 
-  async function saveResult() {
+  async function saveUserResult() {
     try {
-      const params = new URLSearchParams({
-        action: 'save',
-        name: document.getElementById("uName").value,
-        topic: document.getElementById("uTopic").value,
-        q: document.getElementById("uQuest").value,
-        c1: picked[0],
-        c2: picked[1]
-      });
+      const params = new URLSearchParams({ action: 'save', name: document.getElementById("uName").value, topic: document.getElementById("uTopic").value, q: document.getElementById("uQuest").value, c1: picked[0], c2: picked[1] });
       await fetch(`${GAS_URL}?${params.toString()}`);
       alert("상담 결과가 저장되었습니다.");
       document.getElementById("saveBtn").style.display = "none";
-    } catch(e) {
-      alert("저장 요청 실패");
-    }
+    } catch(e) { alert("저장 실패"); }
   }
 </script>
 </body>
