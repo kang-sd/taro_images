@@ -131,56 +131,64 @@
   let picks = [null, null];
 
   // 🔴 1. 하루 2회 제한 및 3일 삭제 로직 (검증 완료)
-  // 🔴 1. 하루 2회 제한 로직 보완 (절대 수정 불가 원칙 준수)
-  async function checkLimitAndGo() {
-    const name = uName.value.trim();
-    if(!name || !uTopic.value) {
-      alert("성함과 주제를 입력해주세요.");
-      return; // ✅ 여기서 즉시 종료
-    }
-
-    const today = new Date(); 
-    today.setHours(0,0,0,0); // 오늘 오전 0시 기준 설정
-    
-    console.log("1. 이름 확인:", name);
-    console.log("2. 기준 시간:", today);
-
-    try {
-      // ✅ Firestore 쿼리 실행
-      const q = window.query(
-        window.collection(window.db, "user_logs"), 
-        window.where("user", "==", name), 
-        window.where("time", ">=", today)
-      );
-      
-      const snap = await window.getDocs(q);
-      console.log("3. 오늘 조회된 기록 수:", snap.size);
-      
-      // ✅ 2회 초과 시 철저 차단
-      if (snap.size >= 2) {
-        console.log("4. ❌ 차단: 2회 초과");
-        alert("오늘의 상담 횟수(2회)를 초과하였습니다. 내일 다시 방문해주세요!");
-        return; // ✅ 페이지 전환(p2 활성화) 없이 함수 종료
-      }
-
-      // 3일 경과 데이터 자동 삭제 로직 (기존 유지)
-      const expiry = new Date(); 
-      expiry.setDate(expiry.getDate() - 3);
-      const oldQ = window.query(window.collection(window.db, "user_logs"), window.where("time", "<", expiry));
-      const oldSnap = await window.getDocs(oldQ);
-      oldSnap.forEach(async (d) => await window.deleteDoc(window.doc(window.db, "user_logs", d.id)));
-
-      // ✅ 통과 시에만 다음 화면으로 전환
-      console.log("5. ✅ 통과: 페이지 전환");
-      p1.classList.remove('active'); 
-      p2.classList.add('active');
-
-    } catch(e) { 
-      console.error("❌ 제한 확인 에러 발생:", e);
-      alert("상담 횟수 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
-      // ❌ 에러 발생 시 p2로 넘어가지 않고 p1에 머무름
-    }
+async function checkLimitAndGo() {
+  const name = uName.value.trim();
+  if(!name || !uTopic.value) {
+    alert("성함과 주제를 입력해주세요.");
+    return;
   }
+
+  const today = new Date(); 
+  today.setHours(0,0,0,0);
+  
+  try {
+    // user 기준으로만 쿼리
+    const q = window.query(
+      window.collection(window.db, "user_logs"), 
+      window.where("user", "==", name)
+    );
+    
+    const snap = await window.getDocs(q);
+    
+    // 오늘 날짜 기록만 카운트
+    let todayCount = 0;
+    const oldDocs = [];
+    const expiry = new Date(); 
+    expiry.setDate(expiry.getDate() - 3);
+    
+    snap.forEach(doc => {
+      const data = doc.data();
+      if (data.time) {
+        const docDate = data.time.toDate();
+        if (docDate >= today) {
+          todayCount++;
+        }
+        if (docDate < expiry) {
+          oldDocs.push(doc.id);
+        }
+      }
+    });
+    
+    console.log("오늘 상담 횟수:", todayCount);
+    
+    if (todayCount >= 2) {
+      alert("오늘의 상담 횟수(2회)를 초과하였습니다. 내일 다시 방문해주세요!");
+      return;
+    }
+
+    // 3일 지난 기록 삭제
+    for (const id of oldDocs) {
+      await window.deleteDoc(window.doc(window.db, "user_logs", id));
+    }
+
+    p1.classList.remove('active'); 
+    p2.classList.add('active');
+
+  } catch(e) { 
+    console.error("❌ 에러:", e);
+    alert("상담 횟수 확인 중 오류가 발생했습니다.");
+  }
+}
 
   const flip = (n) => {
     if(picks[n-1]) return;
@@ -249,5 +257,6 @@
 </script>
 </body>
 </html>
+
 
 
