@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jennifer Canvas Tarot</title>
+  <title>Jennifer Canvas | AI 타로</title>
   
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
-    import { getFirestore, doc, getDoc, collection, getDocs, deleteDoc, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, getDocs, deleteDoc, addDoc, serverTimestamp, query, orderBy, where } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBf9M6rinPb9Ib9JMK18g4TsMIVqy9Umqo",
@@ -25,195 +25,210 @@
     window.db = db; window.addDoc = addDoc; window.collection = collection;
     window.serverTimestamp = serverTimestamp; window.getDocs = getDocs;
     window.query = query; window.orderBy = orderBy; window.deleteDoc = deleteDoc;
-    window.doc = doc; window.getDoc = getDoc;
+    window.doc = doc; window.getDoc = getDoc; window.where = where;
+
     window.cardMap = Array.from({length: 78}, (_, i) => `https://kang-sd.github.io/taro_images/card_${i}.webp`)
       .reduce((a, c, i) => ({...a, [`card_${i}`]: c}), {back: "https://kang-sd.github.io/taro_images/card_back.webp"});
   </script>
 
   <style>
-    :root { --gold: #ffd700; --bg: #0b0b14; --surf: #1a1a2e; --accent: #bc13fe; }
-    body { background: var(--bg); color: #fff; font-family: 'Apple SD Gothic Neo', sans-serif; margin: 0; display: flex; justify-content: center; min-height: 100vh; background-image: radial-gradient(circle at center, #1a1a35 0%, #0b0b14 100%); }
-    .glass-panel { background: rgba(26, 26, 46, 0.9); border: 1px solid rgba(255,215,0,0.2); border-radius: 25px; padding: 25px; box-shadow: 0 15px 45px rgba(0,0,0,0.8); width: 95vw; max-width: 550px; margin: 20px auto; border-top: 3px solid var(--gold); }
-    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,215,0,0.1); padding-bottom: 15px; margin-bottom: 20px; }
-    .page { display: none; animation: fadeIn 0.6s ease; }
+    :root { --gold: #c5a059; --bg: #fdfcf9; --card-white: #ffffff; --text: #444; }
+    body { background: var(--bg); color: var(--text); font-family: 'Apple SD Gothic Neo', sans-serif; margin: 0; display: flex; justify-content: center; min-height: 100vh; }
+    .glass-panel { background: var(--card-white); border-radius: 25px; padding: 30px; box-shadow: 0 15px 50px rgba(0,0,0,0.06); width: 95vw; max-width: 550px; margin: 25px auto; text-align: center; border: 1px solid #f1ece1; }
+    .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1ece1; padding-bottom: 15px; margin-bottom: 25px; }
+    .title-text { font-size: 1.4rem; font-weight: 800; color: var(--gold); }
+    .page { display: none; animation: fadeIn 0.5s ease; }
     .page.active { display: block; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-    
-    .intro-grid { display: flex; gap: 15px; text-align: left; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
-    .main-img { width: 110px; border-radius: 10px; border: 1px solid var(--gold); box-shadow: 0 0 15px rgba(188, 19, 254, 0.4); flex-shrink: 0; }
-    .intro-text { font-size: 0.88rem; line-height: 1.6; color: #ccc; }
-    .hl-red { color: #ff4d4d; font-weight: bold; }
-    .hl-blue { color: #3399ff; font-weight: bold; }
-
-    input, select, textarea { width: 100%; padding: 14px; border-radius: 12px; background: #0f0f1f; border: 1px solid #444; color: white; margin-bottom: 12px; box-sizing: border-box; font-size: 1rem; }
-    .btn { background: linear-gradient(135deg, #ffd700, #b8860b); color: #000; border: none; padding: 18px; border-radius: 50px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1.15rem; box-shadow: 0 5px 15px rgba(255,215,0,0.3); transition: 0.3s; margin-top: 10px; }
-    .btn:hover { transform: translateY(-3px); filter: brightness(1.2); }
-
+    .intro-grid { display: flex; gap: 15px; text-align: left; background: #fffdf8; padding: 20px; border-radius: 15px; margin-bottom: 25px; border: 1px solid #f9f2e7; }
+    .main-img { width: 100px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.08); flex-shrink: 0; }
+    .intro-text { font-size: 0.88rem; line-height: 1.6; color: #666; }
+    .hl-red { color: #d9534f; font-weight: bold; }
+    .hl-blue { color: #4a90e2; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 14px; border-radius: 10px; background: #fff; border: 1px solid #e1dcd3; color: #333; margin-bottom: 12px; box-sizing: border-box; font-size: 1rem; }
+    .btn { background: linear-gradient(135deg, #c5a059, #e2c285); color: #fff; border: none; padding: 18px; border-radius: 50px; width: 100%; font-weight: bold; cursor: pointer; font-size: 1.15rem; box-shadow: 0 5px 15px rgba(197,160,89,0.3); transition: 0.3s; }
+    .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(197,160,89,0.5); }
     .card-slots { display: flex; justify-content: center; gap: 20px; margin: 30px 0; }
-    .card-box { width: 130px; height: 230px; border-radius: 12px; cursor: pointer; background: url('https://kang-sd.github.io/taro_images/card_back.webp') center/cover; border: 1px solid #444; transition: 0.5s; }
-    .card-box.flipped { transform: rotateY(180deg); border-color: var(--gold); box-shadow: 0 0 25px var(--accent); }
-
-    .res-card { background: rgba(255,255,255,0.04); border-radius: 18px; padding: 20px; margin-bottom: 20px; border-left: 5px solid var(--gold); text-align: left; }
-    .res-top { display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px; }
-    .res-img { width: 85px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-    .d-label { color: #a389ad; font-size: 0.85rem; margin-top: 15px; font-weight: bold; border-bottom: 1px solid #333; padding-bottom: 3px; }
-    .d-content { font-size: 0.95rem; line-height: 1.5; margin-top: 5px; color: #efefef; }
-    .int-hl { color: #fff; font-weight: bold; font-size: 1.05rem; border-left: 3px solid var(--accent); padding-left: 10px; background: rgba(188, 19, 254, 0.05); padding-top: 5px; padding-bottom: 5px; }
-
-    #adminModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.98); z-index:9999; padding:20px; overflow-y:auto; box-sizing: border-box; }
+    .card-box { width: 130px; height: 230px; border-radius: 15px; cursor: pointer; background: url('https://kang-sd.github.io/taro_images/card_back.webp') center/cover; border: 1px solid #eee; transition: 0.6s; }
+    .card-box.flipped { transform: rotateY(180deg); border-color: var(--gold); box-shadow: 0 0 15px rgba(197,160,89,0.3); }
+    .res-card { background: #fff; border-radius: 20px; padding: 22px; margin-bottom: 25px; border: 1px solid #f1ece1; text-align: left; }
+    .res-img { width: 85px; border-radius: 8px; float: right; margin-left: 10px; }
+    .d-label { color: var(--gold); font-size: 0.85rem; margin-top: 15px; font-weight: bold; border-bottom: 1px solid #f1ece1; padding-bottom: 3px; }
+    .d-content { font-size: 0.95rem; line-height: 1.6; margin-top: 5px; color: #555; }
+    #adminModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:9999; padding:20px; overflow-y:auto; box-sizing: border-box; }
   </style>
 </head>
 <body>
 
 <div class="glass-panel">
   <div class="header">
-    <span style="font-size:1.6rem;">🔱</span>
-    <span style="font-weight:bold; letter-spacing:1px; color:var(--gold);">JENNIFER CANVAS TAROT</span>
-    <span style="cursor:pointer; font-size:1.3rem;" onclick="openAdmin()">⚙️</span>
+    <span style="font-size:1.5rem;">🌞</span>
+    <span class="title-text">마음의 흐름, 타로</span>
+    <span style="cursor:pointer; color:#ddd;" onclick="openAdmin()">⚙️</span>
   </div>
 
   <div id="p1" class="page active">
     <div class="intro-grid">
       <img src="https://kang-sd.github.io/taro_images/card_0.webp" class="main-img">
       <div class="intro-text">
-        <span class="hl-red">타로란?</span><br>
-        타로란 상징의 카드로 내면과 감정의 흐름을 비추는 도구입니다.<br>
-        <span class="hl-red">질문은.</span> <span class="hl-blue">명확하고 구체적인 질문을 하는 것이 타로 진행의 정확도를 높입니다.</span><br>
-        <span class="hl-red">당신의 마음과 질문이 간절할 때</span> <span class="hl-blue">방향을 제시합니다.</span><br>
-        하루에 2번만 할 수 있고 3일간 저장하고 이후 삭제됩니다.<br>
-        3일간 저장한 타로 결과는 검색을 통해 볼 수 있습니다.<br><br>
-        <span class="hl-red">총 2장을 선택합니다.</span><br>
-        첫 번째 카드는 <span class="hl-blue">과정의 흐름</span>, 두 번째 카드는 <span class="hl-blue">결과</span>를 보여줍니다.
+        <span class="hl-red">타로란?</span> 타로는 상징의 카드로 내면과 감정의 흐름을 비추는 도구입니다.<br>
+        <span class="hl-red">질문은.</span> <span class="hl-blue">명확하고 구체적인 질문이 정확도를 높입니다.</span><br>
+        당신의 마음이 간절할 때 카드는 <span class="hl-blue">방향을 제시합니다.</span><br>
+        하루 2번 가능, 3일간 저장 후 자동 삭제됩니다.<br>
+        <span class="hl-red">총 2장 선택:</span> [과정]과 [결과]를 보여줍니다.
       </div>
     </div>
     <input type="text" id="uName" placeholder="성함을 입력하세요">
-    
     <select id="uTopic">
       <option value="" disabled selected hidden>-- 주제를 선택하세요 --</option>
       <option>연애</option><option>진로/직업</option><option>금전</option><option>감정</option><option>건강</option>
       <option>시험/합격운</option><option>선택/결정</option><option>인간관계</option><option>영적 메시지</option><option>미래 전반</option>
     </select>
-    
-    <textarea id="uQuest" rows="2" placeholder="무엇이 궁금하신가요?"></textarea>
-    <button class="btn" onclick="go2()">▶ 셔플 시작</button>
+    <textarea id="uQuest" rows="2" placeholder="고민 내용을 적어주세요"></textarea>
+    <button class="btn" onclick="checkLimitAndGo()">셔플 시작하기</button>
   </div>
 
   <div id="p2" class="page">
-    <h3 style="color:var(--gold);">카드를 섞었습니다. 두 장을 정성껏 선택하세요.</h3>
+    <h3 style="color:var(--gold);">카드를 정성껏 두 장 선택하세요.</h3>
     <div class="card-slots">
       <div id="slot1" class="card-box" onclick="flip(1)"></div>
       <div id="slot2" class="card-box" onclick="flip(2)"></div>
     </div>
-    <p id="guide" style="font-weight:bold; color:#888;">첫 번째 카드를 선택하세요</p>
-    <button class="btn" id="resBtn" style="display:none;" onclick="go3()">📄 해석 보기</button>
+    <button class="btn" id="resBtn" style="display:none;" onclick="go3()">해석 결과 보기</button>
   </div>
 
   <div id="p3" class="page">
     <div id="finalOutput"></div>
-    <button class="btn" onclick="location.reload()" style="background:#222; color:#fff; margin-top:15px; border:1px solid #444;">🔙 돌아가기</button>
+    <button class="btn" id="saveBtn" onclick="saveUserResult()">나의 타로 결과 저장하기</button>
+    <button class="btn" onclick="location.reload()" style="background:#eee; color:#666; margin-top:10px; box-shadow:none;">처음으로 돌아가기</button>
   </div>
 </div>
 
 <div id="adminModal">
-  <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #444; padding-bottom:15px;">
-    <h2 style="color:var(--gold);">📂 상담 기록 마스터</h2>
-    <button class="btn" style="width:100px; margin:0;" onclick="closeAdmin()">닫기</button>
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h2>상담 기록 관리</h2>
+    <button class="btn" style="width:80px; margin:0;" onclick="closeAdmin()">닫기</button>
   </div>
-  <div id="adminList" style="margin-top:20px; text-align:left;"></div>
+  <div id="adminList" style="text-align:left; margin-top:20px;"></div>
 </div>
 
 <script>
   let picks = [null, null];
-  const go2 = () => {
-    if(!uName.value || !uTopic.value || !uQuest.value) return alert("모든 항목을 입력해주세요.");
+  let currentInterpData = null;
+
+  // 🔴 1. 하루 2회 제한 로직
+  async function checkLimitAndGo() {
+    const name = uName.value.trim();
+    if(!name || !uTopic.value) return alert("성함과 주제를 입력하세요.");
+
+    const today = new Date();
+    today.setHours(0,0,0,0);
+
+    const q = window.query(
+      window.collection(window.db, "user_logs"),
+      window.where("user", "==", name),
+      window.where("time", ">=", today)
+    );
+    const snap = await window.getDocs(q);
+    
+    if (snap.size >= 2) {
+      alert("죄송합니다. 하루에 2번까지만 참여 가능합니다.");
+      return;
+    }
+    
+    // 🔴 2. 3일 지난 데이터 자동 삭제 (접속 시 실행)
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const oldQ = window.query(window.collection(window.db, "user_logs"), window.where("time", "<", threeDaysAgo));
+    const oldSnap = await window.getDocs(oldQ);
+    oldSnap.forEach(async (d) => await window.deleteDoc(window.doc(window.db, "user_logs", d.id)));
+
     p1.classList.remove('active'); p2.classList.add('active');
-  };
+  }
 
   const flip = (n) => {
     if(picks[n-1]) return;
-    if(n==2 && !picks[0]) return alert("첫 번째 카드를 먼저 골라주세요.");
+    if(n==2 && !picks[0]) return alert("첫 번째를 먼저 고르세요.");
     const r = Math.floor(Math.random()*78);
     picks[n-1] = `card_${r}`;
-    const el = document.getElementById(`slot${n}`);
-    el.style.backgroundImage = `url('${window.cardMap[picks[n-1]]}')`;
-    el.classList.add('flipped');
-    if(n==1) guide.innerText = "두 번째 카드를 골라주세요.";
-    else { guide.style.display='none'; resBtn.style.display='block'; }
+    document.getElementById(`slot${n}`).style.backgroundImage = `url('${window.cardMap[picks[n-1]]}')`;
+    document.getElementById(`slot${n}`).classList.add('flipped');
+    if(n==2) resBtn.style.display='block';
   };
 
   async function go3() {
     p2.classList.remove('active'); p3.classList.add('active');
-    finalOutput.innerHTML = "<p style='margin-top:50px;'>운명의 기록을 읽어오는 중입니다...</p>";
-
-    // 파이어베이스 자동 저장
-    try {
-      await window.addDoc(window.collection(window.db, "user_logs"), {
-        user: uName.value, topic: uTopic.value, quest: uQuest.value,
-        cards: picks, time: window.serverTimestamp()
-      });
-    } catch(e) { console.error("기록 저장 실패"); }
+    finalOutput.innerHTML = "분석 중입니다...";
 
     const getData = async (c, t, type) => {
       const cleanT = t.replace(/\//g, "");
-      // 🔴 멍청이 해결 로직: interpretations와 card_details 두 곳에서 모두 fetch
       const [iS, dS] = await Promise.all([
         window.getDoc(window.doc(window.db, "interpretations", `${c}_${cleanT}_${type}`)),
         window.getDoc(window.doc(window.db, "card_details", c))
       ]);
-      
       return { 
         name: dS.exists() ? dS.data()["카드명"] : "알 수 없음",
         txt: iS.exists() ? iS.data()["해석문장"] : "해석 준비 중",
         key: dS.exists() ? dS.data()["주요 키워드"] : "",
         story: dS.exists() ? dS.data()["카드 서사"] : "",
+        posA: dS.exists() ? dS.data()["긍정적 측면"] : "",
+        negA: dS.exists() ? dS.data()["부정적 측면"] : "",
         pos: iS.exists() ? iS.data()["긍정"] : "0",
         neg: iS.exists() ? iS.data()["부정"] : "0",
         tone: iS.exists() ? iS.data()["감정톤"] : "",
-        desc: iS.exists() ? iS.data()["감정설명"] : "",
-        posA: dS.exists() ? dS.data()["긍정적 측면"] : "",
-        negA: dS.exists() ? dS.data()["부정적 측면"] : ""
+        desc: iS.exists() ? iS.data()["감정설명"] : ""
       };
     };
 
     const d1 = await getData(picks[0], uTopic.value, "과정");
     const d2 = await getData(picks[1], uTopic.value, "결과");
+    currentInterpData = { d1, d2 };
 
     let h = "";
     [d1, d2].forEach((d, i) => {
       h += `<div class="res-card">
-        <div class="res-top">
-          <div><span style="color:var(--gold); font-size:0.8rem; font-weight:bold;">${i==0?'[과정의 흐름]':'[결과]'}</span><div style="font-size:1.2rem; font-weight:bold; color:var(--gold); margin-top:5px;">${d.name}</div></div>
-          <img src="${window.cardMap[picks[i]]}" class="res-img">
-        </div>
-        <div class="d-label">주요 키워드</div><div class="d-content">${d.key}</div>
-        <div class="d-label">타로 해석</div><div class="d-content int-hl">${d.txt}</div>
-        <div class="d-label">서사</div><div class="d-content">${d.story}</div>
-        <div class="d-label">긍정부정 / 감정톤</div><div class="d-content">긍정 ${d.pos} / 부정 ${d.neg} (${d.tone} - ${d.desc})</div>
-        <div class="d-label">긍정측면</div><div class="d-content">${d.posA}</div>
-        <div class="d-label">부정측면</div><div class="d-content">${d.negA}</div>
+        <img src="${window.cardMap[picks[i]]}" class="res-img">
+        <div style="color:var(--gold); font-weight:bold;">${i==0?'[과정]':'[결과]'} ${d.name}</div>
+        <div class="d-label">핵심 키워드</div><div class="d-content">${d.key}</div>
+        <div class="d-label">타로 해석</div><div class="d-content" style="color:#222; font-weight:bold;">${d.txt}</div>
+        <div class="d-label">카드 서사</div><div class="d-content">${d.story}</div>
+        <div class="d-label">긍정적/부정적 측면</div><div class="d-content">(+) ${d.posA}<br>(-) ${d.negA}</div>
+        <div class="d-label">감정 수치</div><div class="d-content">긍정 ${d.pos}% / 부정 ${d.neg}% (${d.tone} - ${d.desc})</div>
       </div>`;
     });
     finalOutput.innerHTML = h;
   }
 
+  // 🔴 3. 결과 저장하기 버튼 로직
+  async function saveUserResult() {
+    try {
+      await window.addDoc(window.collection(window.db, "user_logs"), {
+        user: uName.value, topic: uTopic.value, quest: uQuest.value,
+        cards: picks, time: window.serverTimestamp()
+      });
+      alert("성공적으로 저장되었습니다. (3일간 유지됩니다)");
+      saveBtn.style.display = 'none';
+    } catch(e) { alert("저장 실패"); }
+  }
+
   async function openAdmin() {
-    if(prompt("관리자 비밀번호를 입력하세요")=='6128') {
+    if(prompt("비번")=='6128') {
       adminModal.style.display='block';
-      const qSnap = await window.getDocs(window.query(window.collection(window.db, "user_logs"), window.orderBy("time", "desc")));
+      const q = window.query(window.collection(window.db, "user_logs"), window.orderBy("time", "desc"));
+      const snap = await window.getDocs(q);
       let h = "";
-      qSnap.forEach(v => {
+      snap.forEach(v => {
         const d = v.data();
-        h += `<div style="background:#151525; border:1px solid #333; padding:18px; border-radius:15px; margin-bottom:15px; position:relative;">
-          <b style="color:var(--gold); font-size:1.1rem;">${d.user}</b> <small>[${d.topic}]</small><br>
-          <p style="margin:10px 0; color:#ccc; font-size:0.95rem;">${d.quest}</p>
-          <small style="color:#555;">${d.time?.toDate().toLocaleString() || ""}</small>
-          <button onclick="delLog('${v.id}')" style="position:absolute; right:15px; top:15px; background:#ff4d4d; color:white; border:none; padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:bold;">삭제</button>
+        h += `<div style="background:#f9f9f9; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #eee;">
+          <b>${d.user}</b> [${d.topic}]<br>${d.quest}<br>
+          <small>${d.time?.toDate().toLocaleString()}</small>
+          <button onclick="delLog('${v.id}')" style="float:right; background:red; color:white; border:none; padding:5px; border-radius:5px;">삭제</button>
         </div>`;
       });
-      adminList.innerHTML = h || "기록이 없습니다.";
+      adminList.innerHTML = h || "기록 없음";
     }
   }
-  window.delLog = async (id) => { if(confirm("정말로 삭제하시겠습니까?")) { await window.deleteDoc(window.doc(window.db, "user_logs", id)); openAdmin(); } };
+  window.delLog = async (id) => { if(confirm("삭제?")) { await window.deleteDoc(window.doc(window.db, "user_logs", id)); openAdmin(); } };
   function closeAdmin() { adminModal.style.display='none'; }
 </script>
 </body>
