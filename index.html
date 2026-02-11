@@ -22,7 +22,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // 전역 노출
     window.db = db; 
     window.addDoc = addDoc; 
     window.collection = collection;
@@ -258,8 +257,65 @@
       box-sizing: border-box; 
     }
 
+    #resultModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 10000;
+      overflow-y: auto;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    #resultModalContent {
+      background: white;
+      max-width: 600px;
+      margin: 30px auto;
+      border-radius: 20px;
+      padding: 30px;
+      position: relative;
+    }
+
+    .admin-record {
+      background: #f9f9f9;
+      padding: 15px;
+      border-radius: 15px;
+      margin-bottom: 10px;
+      border: 1px solid #eee;
+      position: relative;
+    }
+
+    .admin-btn {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      margin-right: 5px;
+      transition: all 0.2s;
+      font-weight: bold;
+    }
+
+    .admin-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn-view {
+      background: #4a90e2;
+      color: white;
+    }
+
+    .btn-delete {
+      background: #ff5a5a;
+      color: white;
+    }
+
     @media print {
-      .btn, .header, #adminModal { 
+      .btn, .header, #adminModal, #resultModal { 
         display: none !important; 
       }
       body { 
@@ -284,7 +340,6 @@
     <span style="cursor:pointer; font-size:1.3rem; color:#ccc;" onclick="openAdmin()">⚙️</span>
   </div>
 
-  <!-- ========== 페이지 1: 입력 화면 ========== -->
   <div id="p1" class="page active">
     <div class="intro-grid">
       <img src="https://kang-sd.github.io/taro_images/card_0.webp" class="main-img" alt="타로 카드">
@@ -317,7 +372,6 @@
     <button class="btn" onclick="checkLimitAndGo()">셔플 시작하기</button>
   </div>
 
-  <!-- ========== 페이지 2: 카드 선택 화면 ========== -->
   <div id="p2" class="page">
     <h3 style="color:var(--gold);">카드를 두 장 선택하세요.</h3>
     <div class="card-slots">
@@ -328,7 +382,6 @@
     <button class="btn" id="resBtn" style="display:none;" onclick="go3()">해석 결과 확인</button>
   </div>
 
-  <!-- ========== 페이지 3: 결과 화면 ========== -->
   <div id="p3" class="page">
     <div id="finalOutput"></div>
     <button class="btn" onclick="window.print()" style="background: #28a745;">💾 결과 저장 (PDF/이미지)</button>
@@ -336,27 +389,33 @@
   </div>
 </div>
 
-<!-- ========== 관리자 모달 ========== -->
 <div id="adminModal">
-  <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:15px;">
-    <h2>📂 상담 기록 마스터</h2>
+  <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+    <h2 style="margin:0; color:var(--gold);">📂 상담 기록 관리</h2>
     <button class="btn" style="width:100px; margin:0; padding:10px;" onclick="closeAdmin()">닫기</button>
   </div>
-  <div id="adminList" style="margin-top:20px; text-align:left;"></div>
+  <div id="adminList" style="text-align:left;"></div>
+</div>
+
+<div id="resultModal" onclick="closeResult(event)">
+  <div id="resultModalContent" onclick="event.stopPropagation()">
+    <button 
+      onclick="closeResult()" 
+      style="position:absolute; top:15px; right:15px; background:#eee; border:none; width:35px; height:35px; border-radius:50%; cursor:pointer; font-size:1.3rem; color:#666;">
+      ×
+    </button>
+    <div id="modalResultContent"></div>
+  </div>
 </div>
 
 <script>
   let picks = [null, null];
 
-  // ========================================
-  // 🔴 핵심 기능: 하루 2회 제한 체크 + 3일 자동 삭제
-  // ========================================
   async function checkLimitAndGo() {
     const name = document.getElementById('uName').value.trim();
     const topic = document.getElementById('uTopic').value;
     const quest = document.getElementById('uQuest').value.trim();
     
-    // 1. 입력 검증
     if (!name) {
       alert("성함을 입력해주세요.");
       return;
@@ -371,111 +430,66 @@
     }
 
     console.log("=== 상담 시작 ===");
-    console.log("이름:", name);
-    console.log("주제:", topic);
-    console.log("질문:", quest);
     
-    // 2. 오늘 날짜 기준 설정 (오전 0시)
     const today = new Date(); 
     today.setHours(0, 0, 0, 0);
-    console.log("기준 날짜:", today.toLocaleString());
     
     try {
-      // 3. 해당 사용자의 모든 기록 조회
       const q = window.query(
         window.collection(window.db, "user_logs"), 
         window.where("user", "==", name)
       );
       
       const snap = await window.getDocs(q);
-      console.log("총 조회된 기록:", snap.size + "개");
       
-      // 4. 오늘 날짜 기록 카운트 + 오래된 기록 수집
       let todayCount = 0;
       const oldDocs = [];
       const expiry = new Date(); 
-      expiry.setDate(expiry.getDate() - 3); // 3일 전
-      console.log("삭제 기준 날짜:", expiry.toLocaleString());
+      expiry.setDate(expiry.getDate() - 3);
       
       snap.forEach(docSnap => {
         const data = docSnap.data();
         if (data.time) {
           const docDate = data.time.toDate();
-          
-          // 오늘 기록 카운트
-          if (docDate >= today) {
-            todayCount++;
-            console.log(`오늘 기록 발견 #${todayCount}:`, docDate.toLocaleString());
-          }
-          
-          // 3일 지난 기록 수집
-          if (docDate < expiry) {
-            oldDocs.push(docSnap.id);
-            console.log("삭제 대상:", docDate.toLocaleString());
-          }
+          if (docDate >= today) todayCount++;
+          if (docDate < expiry) oldDocs.push(docSnap.id);
         }
       });
       
-      console.log("최종 오늘 상담 횟수:", todayCount);
-      console.log("삭제 대상 기록:", oldDocs.length + "개");
+      console.log("오늘 상담 횟수:", todayCount);
       
-      // 5. 2회 제한 체크
       if (todayCount >= 2) {
-        console.log("❌ 차단: 하루 2회 제한 초과");
         alert("오늘의 상담 횟수(2회)를 초과하였습니다.\n내일 다시 방문해주세요!");
-        return; // ✅ 여기서 함수 완전 종료 - 페이지 전환 없음
+        return;
       }
 
-      // 6. 3일 지난 기록 삭제
-      if (oldDocs.length > 0) {
-        console.log("오래된 기록 삭제 시작...");
-        for (const id of oldDocs) {
-          await window.deleteDoc(window.doc(window.db, "user_logs", id));
-          console.log("삭제 완료:", id);
-        }
+      for (const id of oldDocs) {
+        await window.deleteDoc(window.doc(window.db, "user_logs", id));
       }
 
-      // 7. 통과 - 다음 페이지로 전환
-      console.log("✅ 통과: 카드 선택 페이지로 이동");
       document.getElementById('p1').classList.remove('active');
       document.getElementById('p2').classList.add('active');
 
     } catch(e) { 
-      console.error("❌ 에러 발생:", e);
-      console.error("에러 메시지:", e.message);
-      console.error("에러 스택:", e.stack);
-      alert("상담 횟수 확인 중 오류가 발생했습니다.\n개발자 도구(F12)를 열어 콘솔을 확인해주세요.");
-      // ❌ 에러 발생 시 페이지 전환하지 않음
+      console.error("에러:", e);
+      alert("상담 횟수 확인 중 오류가 발생했습니다.");
     }
   }
 
-  // ========================================
-  // 카드 뒤집기 함수
-  // ========================================
   const flip = (n) => {
-    // 이미 선택된 카드는 다시 선택 불가
-    if (picks[n-1]) {
-      console.log("이미 선택된 카드입니다.");
-      return;
-    }
-    
-    // 첫 번째 카드를 먼저 선택해야 함
+    if (picks[n-1]) return;
     if (n === 2 && !picks[0]) {
       alert("첫 번째 카드를 먼저 고르세요.");
       return;
     }
     
-    // 랜덤 카드 선택 (0~77)
     const r = Math.floor(Math.random() * 78);
     picks[n-1] = `card_${r}`;
-    console.log(`카드 ${n} 선택:`, picks[n-1]);
     
-    // 카드 이미지 변경 및 애니메이션
     const slotEl = document.getElementById(`slot${n}`);
     slotEl.style.backgroundImage = `url('${window.cardMap[picks[n-1]]}')`;
     slotEl.classList.add('flipped');
     
-    // 가이드 메시지 업데이트
     const guideEl = document.getElementById('guide');
     const resBtnEl = document.getElementById('resBtn');
     
@@ -487,42 +501,27 @@
     }
   };
 
-  // ========================================
-  // 결과 해석 페이지로 이동
-  // ========================================
   async function go3() {
-    console.log("=== 결과 해석 시작 ===");
-    
-    // 페이지 전환
     document.getElementById('p2').classList.remove('active');
     document.getElementById('p3').classList.add('active');
     document.getElementById('finalOutput').innerHTML = "<p style='padding:50px; color:#999;'>운명의 메시지를 분석 중입니다...</p>";
 
-    // 1. 상담 기록 저장
     try {
-      const logData = {
+      await window.addDoc(window.collection(window.db, "user_logs"), {
         user: document.getElementById('uName').value, 
         topic: document.getElementById('uTopic').value, 
         quest: document.getElementById('uQuest').value, 
         cards: picks, 
         time: window.serverTimestamp()
-      };
-      
-      await window.addDoc(window.collection(window.db, "user_logs"), logData);
-      console.log("✅ 상담 기록 저장 완료:", logData);
+      });
     } catch(e) {
-      console.error("❌ 기록 저장 실패:", e);
+      console.error("기록 저장 실패:", e);
     }
 
-    // 2. 카드 데이터 가져오기
     const getData = async (cardId, topic, type) => {
       const cleanTopic = topic.replace(/\//g, "");
-      const interpId = `${cardId}_${cleanTopic}_${type}`;
-      
-      console.log(`카드 데이터 조회: ${interpId}`);
-      
       const [interpSnap, detailSnap] = await Promise.all([
-        window.getDoc(window.doc(window.db, "interpretations", interpId)),
+        window.getDoc(window.doc(window.db, "interpretations", `${cardId}_${cleanTopic}_${type}`)),
         window.getDoc(window.doc(window.db, "card_details", cardId))
       ]);
       
@@ -536,129 +535,139 @@
       };
     };
 
-    // 3. 두 카드의 데이터 가져오기
     const topic = document.getElementById('uTopic').value;
     const d1 = await getData(picks[0], topic, "과정");
     const d2 = await getData(picks[1], topic, "결과");
     
-    console.log("카드 1 (과정):", d1);
-    console.log("카드 2 (결과):", d2);
+    const html = generateResultHTML(document.getElementById('uName').value, picks, [d1, d2]);
+    document.getElementById('finalOutput').innerHTML = html;
+  }
 
-    // 4. 결과 HTML 생성
-    const userName = document.getElementById('uName').value;
+  function generateResultHTML(userName, cards, cardData) {
     let html = `<h3 style="color:var(--gold); margin-bottom:25px;">${userName}님의 운명 결과</h3>`;
     
-    [d1, d2].forEach((d, i) => {
+    cardData.forEach((d, i) => {
       const label = i === 0 ? '[과정의 흐름]' : '[최종 결과]';
-      const cardImg = window.cardMap[picks[i]];
-      
       html += `
         <div class="res-card">
-          <img src="${cardImg}" class="res-img" alt="${d.name}">
+          <img src="${window.cardMap[cards[i]]}" class="res-img" alt="${d.name}">
           <b style="color:var(--gold); font-size:1.1rem;">${label} ${d.name}</b>
-          
           <div class="d-label">핵심 키워드</div>
           <div class="d-content">${d.key}</div>
-          
           <div class="d-label">운명의 해석</div>
-          <div class="d-content" style="font-weight:bold; font-size:1rem; color:#333;">${d.txt}</div>
-          
+          <div class="d-content" style="font-weight:bold; font-size:1rem;">${d.txt}</div>
           <div class="d-label">카드의 서사</div>
           <div class="d-content">${d.story}</div>
-          
           <div class="d-label">조언</div>
           <div class="d-content">
-            <b style="color:#28a745;">(+) 긍정적 측면</b><br>
-            ${d.posA}
+            <b style="color:#28a745;">(+) 긍정적 측면</b><br>${d.posA}
             <br><br>
-            <b style="color:#dc3545;">(-) 주의할 점</b><br>
-            ${d.negA}
+            <b style="color:#dc3545;">(-) 주의할 점</b><br>${d.negA}
           </div>
         </div>
       `;
     });
-    
-    document.getElementById('finalOutput').innerHTML = html;
-    console.log("✅ 결과 화면 렌더링 완료");
+    return html;
   }
 
-  // ========================================
-  // 관리자 페이지
-  // ========================================
   async function openAdmin() {
-    const pw = prompt("관리자 비밀번호를 입력하세요");
+    if (prompt("관리자 비밀번호") !== '6128') return;
     
-    if (pw !== '6128') {
-      if (pw !== null) { // 취소 버튼이 아닌 경우만
-        alert("비밀번호가 틀렸습니다.");
-      }
-      return;
-    }
-    
-    console.log("관리자 모드 진입");
     document.getElementById('adminModal').style.display = 'block';
     
-    // 모든 기록 조회 (최신순)
-    const q = window.query(
-      window.collection(window.db, "user_logs"), 
-      window.orderBy("time", "desc")
-    );
+    const q = window.query(window.collection(window.db, "user_logs"), window.orderBy("time", "desc"));
     const snap = await window.getDocs(q);
     
     let html = "";
     snap.forEach(v => {
       const d = v.data();
       const timeStr = d.time ? d.time.toDate().toLocaleString('ko-KR') : '시간 정보 없음';
-      const cards = d.cards ? d.cards.join(', ') : '카드 정보 없음';
       
       html += `
-        <div style="background:#f9f9f9; padding:15px; border-radius:15px; margin-bottom:10px; border:1px solid #eee; position:relative;">
-          <b style="font-size:1.1rem; color:#333;">${d.user}</b> 
-          <small style="color:#666;">[${d.topic}]</small>
-          <br>
-          <span style="color:#555;">질문: ${d.quest}</span>
-          <br>
-          <small style="color:#999;">카드: ${cards}</small>
-          <br>
-          <small style="color:#999;">시간: ${timeStr}</small>
-          <button 
-            onclick="delLog('${v.id}')" 
-            style="position:absolute; right:15px; top:15px; background:#ff5a5a; color:white; border:none; padding:5px 10px; border-radius:8px; cursor:pointer; font-size:0.9rem;">
-            삭제
-          </button>
+        <div class="admin-record">
+          <b style="font-size:1.1rem;">${d.user}</b> <small>[${d.topic}]</small><br>
+          <span style="color:#555;">질문: ${d.quest}</span><br>
+          <small style="color:#999;">${timeStr}</small>
+          <div style="margin-top:10px;">
+            <button onclick='viewResult(${JSON.stringify(d)})' class="admin-btn btn-view">📄 결과보기</button>
+            <button onclick="delLog('${v.id}')" class="admin-btn btn-delete">🗑️ 삭제</button>
+          </div>
         </div>
       `;
     });
     
-    document.getElementById('adminList').innerHTML = html || "<p style='color:#999; padding:20px;'>저장된 기록이 없습니다.</p>";
-    console.log("총", snap.size, "개의 기록 로드 완료");
+    document.getElementById('adminList').innerHTML = html || "<p style='text-align:center; color:#999; padding:20px;'>기록이 없습니다.</p>";
   }
-  
-  // 기록 삭제 함수
-  window.delLog = async (id) => { 
-    if (!confirm("이 기록을 삭제하시겠습니까?")) {
-      return;
-    }
+
+  async function viewResult(data) {
+    document.getElementById('resultModal').style.display = 'block';
+    document.getElementById('modalResultContent').innerHTML = "<p style='padding:50px; text-align:center;'>로딩 중...</p>";
     
     try {
-      await window.deleteDoc(window.doc(window.db, "user_logs", id));
-      console.log("기록 삭제 완료:", id);
-      alert("삭제되었습니다.");
-      openAdmin(); // 새로고침
+      const { user, topic, quest, cards } = data;
+      
+      if (!cards || cards.length < 2) {
+        document.getElementById('modalResultContent').innerHTML = "<p style='color:#ff5a5a; padding:20px;'>카드 정보가 없습니다.</p>";
+        return;
+      }
+      
+      const getData = async (cardId, topic, type) => {
+        const cleanTopic = topic.replace(/\//g, "");
+        const [interpSnap, detailSnap] = await Promise.all([
+          window.getDoc(window.doc(window.db, "interpretations", `${cardId}_${cleanTopic}_${type}`)),
+          window.getDoc(window.doc(window.db, "card_details", cardId))
+        ]);
+        
+        return { 
+          name: detailSnap.exists() ? detailSnap.data()["카드명"] : "알 수 없는 카드", 
+          txt: interpSnap.exists() ? interpSnap.data()["해석문장"] : "해석 준비 중",
+          key: detailSnap.exists() ? detailSnap.data()["주요 키워드"] : "준비 중", 
+          story: detailSnap.exists() ? detailSnap.data()["카드 서사"] : "준비 중",
+          posA: detailSnap.exists() ? detailSnap.data()["긍정적 측면"] : "준비 중", 
+          negA: detailSnap.exists() ? detailSnap.data()["부정적 측면"] : "준비 중"
+        };
+      };
+      
+      const d1 = await getData(cards[0], topic, "과정");
+      const d2 = await getData(cards[1], topic, "결과");
+      
+      let html = `
+        <div style="text-align:center; margin-bottom:20px; padding-bottom:20px; border-bottom:2px solid #f1f1f1;">
+          <h3 style="color:var(--gold); margin:0;">${user}님의 타로 결과</h3>
+          <small style="color:#999;">${topic} | ${quest}</small>
+        </div>
+      `;
+      
+      html += generateResultHTML(user, cards, [d1, d2]);
+      document.getElementById('modalResultContent').innerHTML = html;
+      
     } catch(e) {
-      console.error("삭제 실패:", e);
-      alert("삭제에 실패했습니다.");
+      console.error("결과 로드 실패:", e);
+      document.getElementById('modalResultContent').innerHTML = "<p style='color:#ff5a5a; padding:20px;'>오류가 발생했습니다.</p>";
+    }
+  }
+
+  function closeResult(event) {
+    if (!event || event.target.id === 'resultModal') {
+      document.getElementById('resultModal').style.display = 'none';
+    }
+  }
+  
+  window.delLog = async (id) => { 
+    if (!confirm("삭제하시겠습니까?")) return;
+    try {
+      await window.deleteDoc(window.doc(window.db, "user_logs", id));
+      alert("삭제되었습니다.");
+      openAdmin();
+    } catch(e) {
+      alert("삭제 실패");
     }
   };
   
-  // 관리자 모달 닫기
   function closeAdmin() { 
     document.getElementById('adminModal').style.display = 'none'; 
-    console.log("관리자 모드 종료");
   }
 </script>
 
 </body>
 </html>
-
-
