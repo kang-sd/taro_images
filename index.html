@@ -116,7 +116,11 @@
 
 <script>
   // ✅ Cloud Functions 베이스 URL — 배포 후 실제 URL로 교체
-  const FN = "https://us-central1-taro-project-624a3.cloudfunctions.net";
+  // 이걸
+// const FN = "https://us-central1-taro-project-624a3.cloudfunctions.net";
+
+// 이렇게 (pp32dg7xxq 부분은 대시보드 URL에서 확인한 값)
+const FN = "https://us-central1-taro-project-624a3.cloudfunctions.net";
 
   // 카드 이미지 맵 (UI 표시용만 — 로직 없음)
   const cardMap = Object.fromEntries(
@@ -308,3 +312,4 @@
 
 </body>
 </html>
+
