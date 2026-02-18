@@ -70,9 +70,9 @@
     <input type="text" id="uName" placeholder="성함을 입력하세요">
     <select id="uTopic">
       <option value="" disabled selected hidden>-- 상담 주제 선택 --</option>
-      <option>연애</option><option>진로/직업</option><option>금전</option>
-      <option>감정</option><option>건강</option><option>시험/합격운</option>
-      <option>선택/결정</option><option>인간관계</option><option>영적 메시지</option><option>미래 전반</option>
+      <option>연애</option><option>진로직업</option><option>금전</option>
+      <option>감정</option><option>건강</option><option>시험합격</option>
+      <option>선택결정</option><option>인간관계</option><option>영적 메시지</option><option>미래 전반</option>
     </select>
     <textarea id="uQuest" rows="2" placeholder="질문을 입력하세요"></textarea>
     <button class="btn" id="startBtn" onclick="checkLimitAndGo()">셔플 시작하기</button>
@@ -116,11 +116,7 @@
 
 <script>
   // ✅ Cloud Functions 베이스 URL — 배포 후 실제 URL로 교체
-  // 이걸
-// const FN = "https://us-central1-taro-project-624a3.cloudfunctions.net";
-
-// 이렇게 (pp32dg7xxq 부분은 대시보드 URL에서 확인한 값)
-const FN = "https://us-central1-taro-project-624a3.cloudfunctions.net";
+  const FN = "https://us-central1-taro-project-624a3.cloudfunctions.net";
 
   // 카드 이미지 맵 (UI 표시용만 — 로직 없음)
   const cardMap = Object.fromEntries(
@@ -312,4 +308,6 @@ const FN = "https://us-central1-taro-project-624a3.cloudfunctions.net";
 
 </body>
 </html>
+
+
 
